@@ -1,0 +1,169 @@
+Image Tensors
+
+# Convert bbox into tensors
+bbox_tensor = torch.tensor(bbox)
+
+# Add a new batch dimension
+bbox_tensor = bbox_tensor.unsqueeze(0)
+
+# Resize the image and transform to tensor
+transform = transforms.Compose([
+ transforms.Resize(224),  # Resize image to 224x224
+    transforms.ToTensor() 
+])
+
+# Apply transform to image
+image_tensor = transform(image)
+print(image_tensor)
+
+Drawing A Bounding Box
+
+# Import draw_bounding_boxes
+from torchvision.utils import draw_bounding_boxes
+
+# Define the bounding box coordinates
+bbox = [x_min, y_min, x_max, y_max]
+bbox_tensor = torch.tensor(bbox).unsqueeze(0)
+
+# Implement draw_bounding_boxes
+img_bbox = draw_bounding_boxes(image_tensor, bbox_tensor, width=3, colors="red")
+
+# Tranform tensors to image
+transform = transforms.Compose([
+    transforms.ToPILImage()
+])
+plt.imshow(transform(img_bbox))
+plt.show()
+
+Bounding Boxes Prediction
+
+# Get model's prediction
+with torch.no_grad():
+    output = model(test_image)
+
+# Extract boxes from the output
+boxes = output[0]['boxes']
+
+# Extract scores from the output
+scores = output[0]['scores']
+
+print(boxes, scores)
+
+
+
+Calculate NMS
+
+# Import nms
+from torchvision.ops import nms
+
+# Set the IoU threshold
+iou_threshold = 0.5
+
+# Apply non-max suppression
+box_indices = nms(
+    boxes = boxes,
+    scores = scores,
+    iou_threshold = 0.5,
+)
+
+# Filter boxes
+filtered_boxes = boxes[box_indices]
+
+print("Filtered Boxes:", filtered_boxes)
+
+
+Pre Trained Model Backbone
+
+# Load pretrained weights
+vgg_model = vgg16(weights=vgg16)
+
+# Extract the input dimension
+input_dim = nn.Sequential(*list(vgg_model.classifier.children()))[0].in_features
+
+# Create a backbone with convolutional layers
+backbone = nn.Sequential(*list(vgg_model.features.children()))
+
+# Print the backbone model
+print(backbone)
+
+Classifier Block
+
+# Create a variable with the number of classes
+num_classes = 2
+
+# Create a sequential block
+classifier = nn.Sequential(
+	# Create a linear layer with input features
+	nn.Linear(input_dim, 512),
+	nn.ReLU(),
+	# Add the output dimension to the classifier
+	nn.Linear(512, num_classes),
+)
+
+Box Regressor Block
+
+# Define the number of coordinates
+num_coordinates = 4
+
+bb = nn.Sequential(  
+	# Add input and output dimensions
+	nn.Linear(input_dim, 32),
+	nn.ReLU(),
+	# Add the output for the last regression layer
+	nn.Linear(32, num_coordinates),
+)
+
+Anchor Generator
+
+# Import AnchorGenerator
+from torchvision.models.detection.rpn import AnchorGenerator
+
+# Configure anchor size
+anchor_sizes = ((32, 64, 128),)
+
+# Configure aspect ratio
+aspect_ratios = ((0.5, 1.0, 2.0),)
+
+# Instantiate AnchorGenerator
+rpn_anchor_generator = AnchorGenerator(anchor_sizes, aspect_ratios)
+
+
+Faster RCNN Model
+
+# Import MultiScaleRoIAlign
+from torchvision.ops import MultiScaleRoIAlign
+
+# Instantiate RoI pooler
+roi_pooler = MultiScaleRoIAlign(
+	featmap_names= ["0"],
+	output_size= 7,
+	sampling_ratio= 2,
+)
+
+mobilenet = torchvision.models.mobilenet_v2(weights="DEFAULT")
+backbone = nn.Sequential(*list(mobilenet.features.children()))
+backbone.out_channels = 1280
+
+# Create Faster R-CNN model
+model = FasterRCNN(
+	backbone= backbone,
+	num_classes= 2,
+	anchor_generator= anchor_generator,
+	box_roi_pool= roi_pooler,
+)
+
+Define Loss for RPN and R-CNN
+
+# Implement the RPN classification loss function
+rpn_cls_criterion = nn.BCEWithLogitsLoss()
+
+# Implement the RPN regression loss function
+rpn_reg_criterion = nn.MSELoss()
+
+# Implement the R-CNN classification Loss function
+rcnn_cls_criterion = nn.CrossEntropyLoss()
+
+# Implement the R-CNN regression loss function
+rcnn_reg_criterion = nn.MSELoss()
+
+
