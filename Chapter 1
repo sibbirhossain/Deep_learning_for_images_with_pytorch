@@ -1,0 +1,93 @@
+Binary Classification Model
+
+class BinaryImageClassifier(nn.Module):
+    def __init__(self):
+        super(BinaryImageClassifier, self).__init__()
+        
+        # Create a convolutional layer
+        self.conv1 = nn.Conv2d(3, 16, kernel_size = 3, stride =1 , padding =1 )
+        self.relu = nn.ReLU()
+        self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.flatten = nn.Flatten()
+        
+        # Create a fully connected layer
+        self.fc = nn.Linear(16*32*32, 1)
+        
+        # Create an activation function
+        self.sigmoid = nn.Sigmoid()
+
+Multi Class Classification Model
+class MultiClassImageClassifier(nn.Module):
+  
+    # Define the init method
+    def __init__(self, num_classes):
+        super(MultiClassImageClassifier, self).__init__()
+        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1)
+        self.relu = nn.ReLU()
+        self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.flatten = nn.Flatten()
+
+        # Create a fully connected layer
+        self.fc = nn.Linear(16 * 32 * 32, num_classes)
+        
+        # Create an activation function
+        self.softmax = nn.Softmax(dim = 1)
+
+Adding A New Convlational L:ayer
+# Create a model
+model = CNNModel()
+print("Original model: ", model)
+
+# Create a new convolutional layer
+conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=1)
+
+# Append the new layer to the model
+model.add_module('conv2', conv2)
+print("Extended model: ", model)
+
+
+Creating a Sequencial Block
+
+class BinaryImageClassification(nn.Module):
+  def __init__(self):
+    super(BinaryImageClassification, self).__init__()
+    # Create a convolutional block
+    self.conv_block = nn.Sequential(
+      nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1),
+      nn.ReLU(),
+      nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1),
+      nn.ReLU(),
+    )
+    
+  def forward(self, x):
+    # Pass inputs through the convolutional block
+    x = self.conv_block(x)
+    return x
+
+Save and Load a Model
+
+# Save the model
+torch.save(model.state_dict(), 'ModelCNN.pth')
+
+# Create a new model
+loaded_model = ManufacturingCNN()
+
+# Load the saved model
+loaded_model.load_state_dict(torch.load('ModelCNN.pth'))
+print(loaded_model)
+
+Loading a Pre-trained Model
+
+# Import resnet18 model
+from torchvision.models import (resnet18, ResNet18_Weights)
+
+# Initialize model with default weights
+weights = ResNet18_Weights.DEFAULT
+model = resnet18(weights=weights)
+
+# Set model to evaluation mode
+model.eval()
+
+# Initialize the transforms
+transform = weights.transforms()
+
