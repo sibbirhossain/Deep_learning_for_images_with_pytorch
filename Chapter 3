@@ -1,0 +1,121 @@
+Segmenting Image with a Mask
+
+# Load image and transform to tensor
+image = Image.open("images/Egyptian_Mau_123.jpg")
+transform = transforms.Compose([transforms.ToTensor()])
+image_tensor = transform(image)
+
+# Segment object out of the image
+object_tensor = image_tensor * binary_mask
+
+# Convert segmented object to image and display
+to_pil_image = transforms.ToPILImage()
+object_image = to_pil_image(object_tensor)
+plt.imshow(object_image)
+plt.show()
+
+
+Segmenting with Pre-trained Mask -CNN
+
+# Import maskrcnn_resnet50_fpn
+from torchvision.models.detection import maskrcnn_resnet50_fpn
+
+# Load a pre-trained Mask R-CNN model
+model = maskrcnn_resnet50_fpn(pretrained = True)
+model.eval()
+
+# Load an image and convert to a tensor
+image = Image.open("two_cats.jpg")
+transform = transforms.Compose([transforms.ToTensor()])
+image_tensor = transform(image).unsqueeze(0)
+
+# Perform inference
+with torch.no_grad():
+    prediction = model(image_tensor)
+    print(prediction)
+
+Displaying Soft Mask
+
+# Extract masks and labels from prediction
+masks = prediction[0]["masks"]
+labels = prediction[0]["labels"]
+
+# Plot image with two overlaid masks
+for i in range(2):
+    plt.imshow(image)
+    # Overlay the i-th mask on top of the image
+    plt.imshow(masks[i,0], cmap="jet", alpha = 0.5,)
+    plt.title(f"Object: {class_names[labels[i]]}")
+    plt.show()
+
+Building a U-Net: layers Definitions
+
+
+class UNet(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(UNet, self).__init__()
+
+        self.enc1 = self.conv_block(in_channels, 64)
+        self.enc2 = self.conv_block(64, 128)
+        self.enc3 = self.conv_block(128, 256)
+        self.enc4 = self.conv_block(256, 512)
+
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+
+        self.upconv3 = nn.ConvTranspose2d(512, 256, kernel_size=2, stride=2)
+        self.upconv2 = nn.ConvTranspose2d(256, 128, kernel_size=2, stride=2)
+        self.upconv1 = nn.ConvTranspose2d(128, 64, kernel_size=2, stride=2)
+        
+        # Define the decoder blocks
+        self.dec1 = self.conv_block(512, 256)
+        self.dec2 = self.conv_block(256, 128)
+        self.dec3 = self.conv_block(128, 64)
+
+        self.out = nn.Conv2d(64, out_channels, kernel_size=1)
+
+
+
+Building a U-Net: Forward Method
+
+
+def forward(self, x):
+    x1 = self.enc1(x)
+    x2 = self.enc2(self.pool(x1))
+    x3 = self.enc3(self.pool(x2))
+    x4 = self.enc4(self.pool(x3))
+
+    x = self.upconv3(x4)
+    x = torch.cat([x, x3], dim=1)
+    x = self.dec1(x)
+
+    x = self.upconv2(x)
+    x = torch.cat([x, x2], dim=1)
+    x = self.dec2(x)
+
+    # Define the last decoder block with skip connections
+    x = self.upconv1(x)
+    x = torch.cat([x, x1], dim =1)
+    x = self.dec3(x)
+
+    return self.out(x)
+
+
+
+Running Semantic Segmentation
+
+# Load model
+model = UNet()
+model.eval()
+
+# Load and transform image
+image = Image.open("car.jpg")
+transform = transforms.Compose([transforms.ToTensor()])
+image_tensor = transform(image).unsqueeze(0)
+
+# Predict segmentation mask
+with torch.no_grad():
+    prediction = model(image_tensor).squeeze(0)
+
+# Display mask
+plt.imshow(prediction[1, :, :])
+plt.show()
